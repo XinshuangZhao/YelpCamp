@@ -1,0 +1,186 @@
+Express Middleware
+- functions that run during the request/response lifecycle
+- each Middleware has access to the request and response objects
+can end the HTTP request by sending back response with methods like res.send()
+can be chained together, one after another by calling next
+
+//examples of app.use
+
+app.use(express.json());
+app.use(express.urlencoded());
+
+// InstallMorgan Middleware
+npm i morgan
+const morgan = require('morgan');
+
+const AppError = require('./AppError')
+
+app.use(morgan('tiny)); //logging information about every request 
+//'dev', 'common', 'tiny'
+
+ n
+//This is a customized Middleware, must run before app.get that uses req.requestTime
+app.use((req,res, next) =>{
+    req.requestTime = Date.now();
+    //req.method = 'GET';
+    console.log(req.method, req.path); // req.methods: GET, POST req.path: /dogs
+    next();
+})
+
+
+//This is a customized Middleware
+app.use((req, res, next) =>{
+    console.log("1st something"); //1st show
+    next(); //only next middleware; but if return next(), nothing after that line runs
+    console.log("This line still runs"); //end/3rd show
+}) //runs on every single request but not sending anything back
+
+//This is a customized Middleware
+app.use((req, res, next) =>{
+    console.log("2nd something"); //2nd show
+    next();
+}) //with next, code will move on
+
+//only on a certain page, can use regex to use on patterns
+app.use('/dogs', (req, res, next) =>{
+    console.log("2nd something"); //2nd show
+    next();
+}) //with next, code will move on
+
+//AUTH
+//app.use((req, res, next) => {
+const verifyPassword = (req, res, next) =>{
+    //console.log(req.query); 
+    //if /secrect?food=chicken req.query is {food:chicken}
+    const {password} = req.query;
+    if(password === 'chickennugget){
+        next();
+    }
+    //res.send('PASSWORD NEEEDED!');
+    //res.status(401);
+    //throw new Error('Password required'); 
+    throw new AppError('Password required'); 
+})
+
+app.get('/', (req, res) => {
+    console.log(`REQUEST DATE: ${req.requestTime}`);
+    res.send('HOME PAGE!');
+})
+
+app.get('/dogs', (req, res) => {
+    console.log(`REQUEST DATE: ${req.requestTime}`);
+    res.send('WOOF WOOF!');
+})
+
+//put the Middleware inside app.get() enable this page
+app.get('/secret',verifyPassword, (req, res) => {
+    res.send('something');
+})
+
+app.get('/admin', (req,res) => {
+    throw new AppError('You are not an admin', 403);
+})
+
+//404 This should be put at the end when above /dog etc. don't match
+app.use((req, res) =>{
+    res.status(404).send('NOT FOUND!');
+    //res.send('NOT FOUND!'); //when there is /dog but no /chicken
+})
+
+//handle Errors
+//app.use((err, req, res, next) =>{
+    //res.status(500).send("OH ERROR");
+    //next(err);
+//})
+
+app.use((err, req, res, next) =>{
+    const { status = 500, message = 'something went wrong' } = err; //set default as 500
+    res.status(status).send(message);
+}
+
+app.listen(3000, () => {
+    console.log('app running');
+})
+
+//console.dir() to look at properties
+
+
+---------------------------------------------------------------------
+The product app example
+Async Errors
+
+//all next(e) will be passed into this Middleware and res.status().send()
+app.use((err, req, res, next) =>{
+    const { status = 500, message = 'something went wrong' } = err; //set default as 500, ...
+    res.status(status).send(message);
+}
+
+app.get('/product/:id', async(req, res, next) => {
+    try {
+        const {id} = req.params;
+        const product = await Product.findById(id);
+        if(!product){
+            return next(new AppError("product not found", 404));
+        }
+        res.render('product/show', { product})
+    } catch(e) {
+        next(e)
+    }
+})
+
+app.get('/product/:id/edit', async(req, res, next) => {
+    try {
+        const {id} = req.params;
+        const product = await Product.findById(id);
+        if(!product){
+            throw new AppError("product not found", 404);
+        }
+    res.render('product/show', { product})
+
+    } catch (e) {
+        next(e);
+    }
+    
+})
+
+app.post('products', async(req, res, next) => {
+    try {
+        await ...  
+    } catch (e) {
+        next(e);
+    }
+})
+
+Define An Async Utility
+|
+|
+function wrapAsync(fn) {
+    return function(req, res, next){
+        fn(req, res, next).catch( e => next(e))
+    }
+}
+
+app.get('/product/:id', warpAsync(async(req, res, next) => {
+
+    const {id} = req.params;
+    const product = await Product.findById(id);
+    if(!product){
+        thorw new AppError("product not found", 404);
+    }
+    res.render('product/show', { product})
+
+}))
+
+
+Differentiate Mongoose Errors
+
+const handleValidationErr = err => {
+    console.dir(err);
+    return new AppError(`Validation failed...${err.message}`, 400);
+}
+app.use((err, req, res, next) =>{
+    console.log(err.name); //can be Error, ValidationError, CastError...
+    if (err.name === 'ValidationError') err = handleValidationErr(err)
+    next(err);
+}
+

@@ -1,0 +1,151 @@
+SQL Relationships Overview (Nice To Have)
+One to Few (Crucial)
+One to Many (Crucial)
+One to Bajillions (Crucial)
+Populate (Crucial)
+Mongo Schema Design (Important)
+
+-------------------------------------------
+One to Few 
+-------------------------------------------
+-embeded the data directly in thr documrnt
+{
+    name: 'ss',
+    savedAddress: [
+        {street: 'ss', city: 'dss', country: 'djas'},
+        {street: 'ss', city: 'dss', country: 'djas'}
+    ]
+}
+
+
+const userSchema = new mongoose.Schema({
+    first: String,
+    last: String,
+    address: [
+        {
+            _id: {id: false}, //add this to avoid default id on address
+            street: String,
+            city: String,
+            state: String,
+            country: String
+        }
+    ]
+})
+
+const User = mongoose.model('User', userSchema);
+const makeUser = async () => {
+    const u = new User({
+        first: 'Harry',
+        last: 'Potter'
+    })
+
+    u.address.push({
+        street: '123 denish',
+        city: 'New York',
+        state: 'NY',
+        country: 'USA'
+    })
+
+    const res = await u.save()
+    console.log(res)
+}
+
+const addAddress = async(id) => { //add another address on this user
+    const user = await User.findById(id);
+    user.address.push(
+        {
+        street: '99123 denish',
+        city: 'New York',
+        state: 'NY',
+        country: 'USA'
+        }
+    )
+    const res = await user.save()
+    console.log(res)
+}
+
+makeUser()
+
+-------------------------------------------
+One to Many
+-------------------------------------------
+store reference
+
+const productSchema = new mongoose.Schema({
+    name: String,
+    price: Number,
+    season: {
+        type: String,
+        enum: ['Spring', 'Summer', 'Fall', 'Winter']
+    }
+})
+
+const Product = mongoose.model('Product', productSchema);
+
+Product.insertMany([
+    {name: 'sss', price:'12', season:'Spring'},
+    {name: 'sss', price:'12', season:'Spring'},
+    {name: 'sss', price:'12', season:'Spring'},
+])
+
+// const {Schema} = mongoose.Schema
+
+const farmSchema = new Schema({
+    name: String,
+    city: Number,
+    products: [{type:Schema.Types.ObjectId, ref: 'Product'}]
+})
+
+const Farm = mongoose.model('Farm', farmSchema);
+
+const makeFarm = async() =>{
+    const farm = new Farm({});
+    const melon = await Product.findOne({name: 'Goddess Melon'});
+    farm.products.push(melon); 
+    await farm.save(); //no save not in database
+}
+
+makeFarm();
+
+
+.populate('products')
+
+-------------------------------------------
+One to Bajillions
+-------------------------------------------
+store a reference to the parent on the child dicument
+
+{
+    tweetText: 'si',
+    User: objectId
+}
+
+const userSchema = new Schema({
+    username: String,
+    age: Number
+})
+
+const tweetSchema = new Schema({
+    text: String,
+    likes: Number,
+    user: { type: Schema.Types.ObjectId, ref: 'User'}
+})
+
+const User = mongoose.model('User', userSchema);
+const Tweet = mongoose.model('Tweet', tweetSchema);
+
+const makeTweets = async () => {
+    const user = new User({ username: 'chickenfan99', age: 61});
+    const tweet1 = new Twet({ text: 'hkjkj', likes: 0});
+    tweet1.user = user;
+    user.save(); //populate field
+    tweet1.save();
+}
+
+makeTweets()
+
+const findTwet = async () => {
+    //const t = await Tweet.findOne({}); //user is just an id
+    /const t = await Tweet.findOne({}).populate('user'); //user contains all details
+    const t = await Tweet.findOne({}).populate('user', 'username'); //user contains username only
+}

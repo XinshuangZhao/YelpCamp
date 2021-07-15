@@ -1,0 +1,16 @@
+// Handling Errors in Express Apps
+
+Define Custom Error Handlers
+Handling Asyn Errors
+
+
+Express Built-in Error Handlers
+
+class AppError extends Error {
+    constuctor(message, status) {
+        super();
+        this.message = message;
+        this.status = status;
+    }
+}
+module.exports = AppError;

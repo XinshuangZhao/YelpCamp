@@ -1,0 +1,41 @@
+Cookies
+
+npm i cookie-parser
+const express = require('express');
+const cookieParser = require('cookie-parser')
+const app = express();
+
+app.user(cookieParser('thisismysecret'));
+
+app.get('/greet', (res, next) => {
+    console.log(req.cookies);
+    const {name = 'No-name'} = req.coookies;
+    res.send(`Hey there, ${name}`)
+})
+
+app.get('/setname', (res, next) => {
+    res.cookie('name', 'first last'); 
+    res.cookie('animal', 'shrimp');
+    res.send("you got a cookie")
+})
+
+
+------
+signing cookies
+------
+
+app.get('/getsignedcookie', (res, next) => {
+    res.cookie('fruit', 'grape', {signed: true});
+    res.send("ok signed your fruit cookie");
+})
+
+app.get('/verifyfruit', (res, next) => {
+    //console.log(req.cookies); //donot include fruit grape
+    //console.log(req.signedcookies); //only {fruit: grape} cannot be modified in devtools
+    res.send(req.cookies);
+})
+
+app.listen(3000, () => {
+
+})
+

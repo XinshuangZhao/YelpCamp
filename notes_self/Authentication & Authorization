@@ -1,0 +1,117 @@
+Authentication: verify who the user is -username/password, security quetsions, face recognition
+Authorization: what a user has access to, gnerally after authentication
+
+# Never store passwords!
+# Hashing! input data of arbitrary size to fixed-size output values
+
+Cryptographic Hashing Functions for passwords
+- One-way, infeasible to invert # absolute value
+- Small change in input -> large change in output
+- Deterministic, same input same output
+- Unlikely to find 2 ouputs with same value
+- deliberately slow
+
+
+Password Salts - add in random information and store the salt separately
+
+BCRYPT - hash function
+npm i bcrypt
+
+bcrypt.genSalt(saltRounds, function(err, salt) {
+    bcrypt.hash(myPlainPassword,)
+})
+
+const hashPassword = async(pw) => {
+    const salt = await bcrypt.genSalt(12); //12 is standard, the number decides how long it takes to generate
+    const hash = await bcrypt.hash(pw, salt);
+    //const hash = await bcrypt.hash(pw, 12);
+}
+
+hashPassword('password');
+
+const login = async(pw, hashedPw) => {
+    const result = bcrypt.compare(pw, hashedPw);
+    if(result){
+
+    }else{
+
+    }
+} 
+
+------------------------------------
+Auth Demo
+------------------------------------
+
+const requireLogin = (req, res, next) => {
+    if (!req.session.uder_id) {
+        return res.redirect('/login')
+    }
+    next();
+}
+
+app.post('/register', async(req, res) => {
+    const {password, username} = req.body;
+    const hash = await bcrypt.hash(password, 12);
+    const user = new User({
+        username,
+        password: hash
+    })
+    await user.save();
+    res.session.user_id = user._id;
+    res.redirect('/');
+})
+
+app.get('/login', (req, res) => {
+    res.render('login')
+})
+
+app.post('/login', async (req, res) => {
+    const {password, username} = req.body;
+    const user = await User.findOne({username});
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (validPassword){
+        res.session.user_id = user._id; //store id in session
+        res.redirect('/secret');
+    }else{
+        res.send('Try Again");
+        res.redirect('/login');
+    }
+})
+
+app.post('/logout', (req, res) => {
+    req.session.user_id = null;
+    res.redirect('/login');
+})
+
+//
+app.get('/secret', (req, res) => {
+    if (!req.session.user_id){
+        return res.redirect('/login')
+    }
+    res.render('secret');
+})
+//
+
+app.get('/secret', requireLogin, (req, res) => { //use Middleware
+    res.render('secret');
+})
+
+-------------------------
+in models/user.js
+-------------------------
+const userSchema = ({
+
+})
+
+
+//on the class User
+userSchema.statics.findAndValidate = async function(username, password) {
+    const foundUser = await this.findOne({username});
+    const isValid = await bcrypt.compare(password, foundUser.password);
+}
+
+const foundUser = await User.findAndValidate(username, password);
+if (foundUser) {
+    ...
+}

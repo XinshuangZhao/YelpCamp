@@ -1,0 +1,70 @@
+session: 
+cookies store limited client-side data. Sessions are server-side data store to make HTTP stateful. 
+Sessions store data on server-side and send the browser a cookie to retrieve the data.
+
+redis database for short-term data storation
+
+npm i express-session
+
+//add
+const session = require('express-session');
+
+const sessionOptions = { secret:'thisisnotagoodsecret', resave: false, saveUninitialized: false};
+app.use(session(sessionOptions));
+
+app.get('/viewcount', (req, res) =>{
+    if(req.session.count) {
+        req.session.count += 1;
+    } else {
+        req.session.count = 1;
+    }
+    res.send(`You have viewed this page ${req.session.count} times`)
+})
+
+app.get('/register', (req, res) =>{
+    const {username = 'Anonymous'} = req.query; // /register?username=colt
+    req.session.username = username;
+    res.redirect('/greet')
+})
+
+app.get('/greet', (req, res) =>{
+    const {username} = req.session;
+    res.send(`Hey welcome back, ${username}`);
+})
+
+
+
+//in cookies it's stored as connect.sid value(a string)
+
+
+-------------------------------------------------
+Flash - a special area of the session used for storing messages
+Messages are written to the flash and cleared after being displayed to the user
+Typically used in combination with redirects to next page
+
+npm i connect-flash  
+
+const flash = require('connect-flash');
+app.use(flash());
+
+app.use((req, res, next) => { //any template rendered after this can access messages
+    res.locals.messages = req.flash('success')'
+    next()
+})
+
+// in farms/index.js at the top of body
+// <%= messages %> //show once and disappear after refresh
+
+app.get('/farms', async(req, res) => {
+    const farms = await Farm.find({});
+    //res.render('farms/index', {farms, messages: req.flash('success')}); //call flash here
+    res.render('farms/index', {farms}); //no need for messages here if use res.locals.messages
+})
+
+app.post('/farms', async(req, res) => {
+    const farm = new Farm(req.body);
+    await farm.save();
+    req.flash('success', 'Successfully made the farm'); //use before redirect
+    res.redirect('/farms');
+})
+

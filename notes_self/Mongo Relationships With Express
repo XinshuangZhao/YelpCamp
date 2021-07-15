@@ -1,0 +1,93 @@
+Deleting with Mongo Middleware
+Define Farm & Product Models
+Create Farms
+Farms Show Page
+
+farmSchema = new Schema({
+    name
+    city
+    email
+    products:[
+        {
+            type:Schema.types.ObjectId,
+            ref: 'Product'
+        }
+    ]
+})
+
+const Farm = mongoose.model('Farm', farmSchema);
+module.exports = Farm;
+
+productSchema = new Schema({
+    name
+    price
+    category
+    farm:{
+        type:Schema.types.ObjectId,
+        ref: 'Farm'
+    }
+})
+
+const Product = mongoose.model('Product', productSchema);
+module.exports = Product;
+
+
+---------------------------------
+Create Farm Routes
+...
+
+
+/farm/:farm_id/products/new
+/farm/:farm_id/products
+
+app.get('/farm/:_id/products/new', async (req, res) =>{
+    const { id } = req.params;
+    const farm = await Farm.findById(id);
+    res.render('products/new', {categories, farm})
+})
+
+app.post('/farm/:_id/products', async (req, res) =>{
+    const {id} = req.params; //the id of the farm
+    const farm = await Farm.findById(id); //find the farm by id
+    const {name, price, category} = req.body;
+    const product = new Product({ name, price, category });
+    farm.products.push(product); //two-way, farm.products is an array can have multiple
+    product.farm = farm;//two-way, product has one farm
+    await farm.save();
+    await product.save();
+    res.redirect(`/farms/${id}`)
+})
+
+------------------
+app.get('farms/:id', asyn (req, res) => {
+    const farm = await Farm.findById(req.params.id).populate('product').populate('products'); 
+    //without populate products is just an id not with specific values
+    res.render('farms/show', { farm })
+})
+//in show Page
+//
+<ul>
+<% for(let product of farm.products) { %>
+<li><%=product.name%></li>
+<% } %>
+</ul>
+
+--------------------------
+Delete
+--------------------------
+in farm.js add:
+farmSchema.pre('findOneAndDelete', async function() { //Mongooese Middleware differ from Express Middleware
+    //no access to deleted farm
+})
+farmSchema.post('findOneAndDelete', async function() { //Mongooese Middleware differ from Express Middleware
+    //access to deleted farm
+    if (farm.products.length){
+        const res = await products.deleteMany({ _id: { $in : farm.products }});
+        console.log(res)
+    }
+})
+
+app.delete('farms/:id', async(req, res) =>{
+    const farm = await Farm.findByIdAndDelete(req.params.id);
+    res.redirect('/farms');
+})
